@@ -175,13 +175,8 @@ public class SecretSantaMailer {
 	}
 	
 	public static void main(String[] args){
-		for (int i = 0; i < 10; i++) {
-			try {
-				Thread.sleep(50);
-			} catch (InterruptedException e) {}
 		SecretSantaMailer ssm = new SecretSantaMailer();
 		ssm.sendAnnouncementEmail();
-		}
 		
 		if (DEBUG) {
 			//Test Email section
