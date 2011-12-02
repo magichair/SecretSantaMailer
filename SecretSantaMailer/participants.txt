@@ -1,0 +1,16 @@
+#
+# Participants configuration file
+#  -This file should be present at the root of the project
+#  -Edit this file to dynamically load the participants into
+#   the mailer program.
+#
+# Format as comma separated values (no commas in the names or emails)
+#  Use the optional third value to specify another participant off limits to that participant
+#
+# Example
+#Life Partner 1, lp1@aol.com, Life Partner 2
+#Life Partner 2, lp2@aol.com, Life Partner 1
+#Friend 1, friend1@aol.com
+#Friend 2, friend2@aol.com
+#Friend 3, friend3@aol.com
+#

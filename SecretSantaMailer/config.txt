@@ -1,0 +1,13 @@
+#
+# Configuration file for SecretSantaMailer
+#
+
+# Java-mail configuration settings
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SENDER_FROM_EMAIL=null@null.com
+
+# Message Details
+#  Supported patterns are %GIVER_NAME% and %GIVER_TARGET_NAME%
+SUBJECT=CONFIDENTIAL: Your secret santa assignment
+BODY=Merry Christmas %GIVER_NAME%! <br><br>This is an automated message generated from John's Super Secret Santa Picker. Rest Assured, much care has been put to ensure that your organizer does not see these results. <br><br>Your assignment for secret santa is <b>%GIVER_TARGET_NAME%</b>.<br><br>Since this is still a prototype program, send a reply in a NEW EMAIL to your organizer to confirm that you received your email (and that your assignment doesn't break the couples rules)<br><br>Have Fun!<br>--John's Super Secret Santa Picker (JSSSP)
