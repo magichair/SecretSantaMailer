@@ -12,6 +12,20 @@ public class Participant {
 	private Participant m_targetParticipant;
 	private boolean m_hasGiver;
 	
+	public Participant (String csvString) {
+		String[] parts = csvString.split(",");
+		if (! (parts.length >= 2 || parts.length <= 3) ) {
+			throw new IllegalArgumentException("Could not parse participant");
+		}
+		m_name = parts[0].trim();
+		m_email = parts[1].trim();
+		if (parts.length > 2) {
+			m_disallowedName = parts[2].trim();
+		} else {
+			m_disallowedName = "";
+		}
+	}
+	
 	public Participant (String name, String email) {
 		m_name = name;
 		m_email = email;
@@ -73,5 +87,20 @@ public class Participant {
 				|| partner.getDisallowedName().equals(m_name)
 				|| partner.equals(this)
 				|| partner.hasGiver());
+	}
+	
+	/**
+	 * For debug purposes
+	 */
+	public String toString() {
+		String str = "{" + m_name + ", " + m_email;
+		if (!m_disallowedName.isEmpty()) {
+			str += ", " + m_disallowedName;
+		}
+		str += "}";
+		if (m_targetParticipant != null) {
+			str += "-->" + m_targetParticipant.m_name;
+		}
+		return str;
 	}
 }

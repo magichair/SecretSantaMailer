@@ -4,6 +4,11 @@
  */
 package net.projectfuse.mail.secretsanta;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Random;
@@ -37,28 +42,33 @@ public class SecretSantaMailer {
 		}
 	}
 
-	private static final String SMTP_PORT = "465";
+	private static final String PARTICIPANTS_FILENAME = "participants.txt";
+	private static final String CONFIG_FILENAME = "config.txt";
+	
+	private MailConfiguration m_mailConfig;
 	private static final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
-	private static final String SENDER_FROM_EMAIL = "null@null.com";
+	
+	/* 
+	 * Won't send emails while this is set to true - will only print results
+	 * When off - results are NOT printed to System.out and emails are sent
+	 */
+	private static final boolean DEBUG = true;
 
 	private ArrayList<Participant> m_participants = new ArrayList<Participant>();
 	private Random rand;
 	private MyPopupAuthenticator m_authenticator;
 	
 	public SecretSantaMailer(){
-		m_participants.add(new Participant("Life Partner 1", "null@null.com", "Life Partner 2"));
-		m_participants.add(new Participant("Life Partner 2", "null@null.com", "Life Partner 1"));
-		/*
-		 * Add all participants here
-		 */
-		m_participants.add(new Participant("Friend 1", "null@null.com"));
-		m_participants.add(new Participant("Friend 2", "null@null.com"));
+		loadParticipants();
+		
+		m_mailConfig = new MailConfiguration(new File(CONFIG_FILENAME));
+		
 		rand = new Random(System.currentTimeMillis());
 		
 		m_authenticator = new MyPopupAuthenticator();
 	}
 	
-	public void sendAnnouncementEmail(){
+	private void sendAnnouncementEmail(){
 		// Making a list
 		int retryCount = 0;
 		while(!assignParticipants()){
@@ -71,13 +81,16 @@ public class SecretSantaMailer {
 		System.out.println("Had to retry " + retryCount + " times!");
 		for (Participant p : m_participants) {
 			// LALALALALALAL I CAN'T SEE THIS
-			//System.out.println(p.getName() + " --> " + p.getTargetParticipant().getName());
-			try {
-				sendEmail(p);
-			} catch (AddressException e) {
-				e.printStackTrace();
-			} catch (MessagingException e) {
-				e.printStackTrace();
+			if (DEBUG) {
+				System.out.println(p.getName() + " --> " + p.getTargetParticipant().getName());
+			} else {
+				try {
+					sendEmail(p);
+				} catch (AddressException e) {
+					e.printStackTrace();
+				} catch (MessagingException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		
@@ -116,9 +129,9 @@ public class SecretSantaMailer {
 		}
 	}
 	
-	public void sendEmail(Participant giver) throws AddressException, MessagingException {
-		String host = "smtp.gmail.com";
-		String from = SENDER_FROM_EMAIL;
+	private void sendEmail(Participant giver) throws AddressException, MessagingException {
+		String host = m_mailConfig.getSmtpHost();
+		String from = m_mailConfig.getSenderFromEmail();
 		String to = giver.getEmail();
 		
 		// Get system properties
@@ -128,13 +141,12 @@ public class SecretSantaMailer {
 		props.put("mail.smtp.host", host);
 		props.put("mail.smtp.auth", "true");
 		//props.put("mail.debug", "true");
-		props.put("mail.smtp.port", SMTP_PORT);
-		props.put("mail.smtp.socketFactory.port", SMTP_PORT);
+		props.put("mail.smtp.port", m_mailConfig.getSmtpPort());
+		props.put("mail.smtp.socketFactory.port", m_mailConfig.getSmtpPort());
 		props.put("mail.smtp.socketFactory.class", SSL_FACTORY);
 		props.put("mail.smtp.socketFactory.fallback", "false");
 
 		// Get session
-		//Authenticator auth = new MyPopupAuthenticator();
 		Session session = Session.getDefaultInstance(props, m_authenticator);
 		
 		//session.setDebug(true);
@@ -144,17 +156,16 @@ public class SecretSantaMailer {
 		message.setFrom(new InternetAddress(from));
 		message.addRecipient(Message.RecipientType.TO, 
 		  new InternetAddress(to));
-		message.setSubject("CONFIDENTIAL: Your secret santa assignment");
-		String body =
-				"Merry Christmas " + giver.getName() + "!" +
-				"<br><br>This is an automated message generated from John's super secret secret santa picker." +
-				"Rest assured, much care has been put to ensure that John does not see these results." +
-				"<br><br>Your assignment for secret santa is <b>" + giver.getTargetParticipant().getName() + "</b>." +
-				"<br><br>Since this is a prototype program, please send a reply to John IN A NEW EMAIL (he doesn't want to know who you got) to confirm that you received this email." +
-				"<br>Further details about price limits and gift exchange date to come soon (from Geno)!" +
-				"<br>If for some reason your assignment conflicts with the couples rule, please email John and he'll fix me and re-run me." +
-				"<br><br>Have fun!" +
-				"<br>--John's Super Secret Secret Santa Picker (JSSSSP)";
+		String subject = MailConfiguration.substituePatterns(
+				giver.getName(),
+				giver.getTargetParticipant().getName(),
+				m_mailConfig.getEmailSubject());
+		message.setSubject(subject);
+		String body = 
+			MailConfiguration.substituePatterns(
+					giver.getName(), 
+					giver.getTargetParticipant().getName(),
+					m_mailConfig.getEmailBody());
 		message.setContent(body, "text/html");
 
 		// Send message
@@ -164,21 +175,48 @@ public class SecretSantaMailer {
 	}
 	
 	public static void main(String[] args){
+		for (int i = 0; i < 10; i++) {
+			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e) {}
 		SecretSantaMailer ssm = new SecretSantaMailer();
 		ssm.sendAnnouncementEmail();
+		}
 		
-		//Test Email section
-		/*try {
-			Participant testParticipant = new Participant("test1", "test@null.com");
-			Participant testGetter = new Participant("test2", "test2@null.com");
-			testParticipant.setTargetParticipant(testGetter);
-			testGetter.setTargetParticipant(testParticipant);
-			ssm.sendEmail(testParticipant);
-			ssm.sendEmail(testGetter);
-		} catch (AddressException e) {
+		if (DEBUG) {
+			//Test Email section
+			/*try {
+				Participant testParticipant = new Participant("test1", "test1@null.com");
+				Participant testGetter = new Participant("test2", "test2@gmail.com");
+				testParticipant.setTargetParticipant(testGetter);
+				testGetter.setTargetParticipant(testParticipant);
+				ssm.sendEmail(testParticipant);
+				ssm.sendEmail(testGetter);
+			} catch (AddressException e) {
+				e.printStackTrace();
+			} catch (MessagingException e) {
+				e.printStackTrace();
+			}*/
+		}
+	}
+	
+	private void loadParticipants() {
+		File participantFile = new File(PARTICIPANTS_FILENAME);
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new FileReader(participantFile));
+			String line = null;
+			while((line = br.readLine()) != null) {
+				line = line.trim();
+				if (line.startsWith(MailConfiguration.COMMENT_CHAR) || line.isEmpty()) {
+					continue;
+				}
+				m_participants.add(new Participant(line));
+			}
+		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-		} catch (MessagingException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
-		}*/
+		}
 	}
 }
